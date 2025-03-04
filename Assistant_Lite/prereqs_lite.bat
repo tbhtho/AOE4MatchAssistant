@@ -97,11 +97,11 @@ echo.
 echo Setup complete! You can now run the Age of Empires IV Strategy Helper.
 echo.
 echo Note: Run this script or the Python script as administrator for hotkeys (Insert/F10) to work in-game.
-echo To run manually, use: python aoe4strat.py
+echo To run manually, use: python Assistant_lite.py
 echo.
 echo Press any key to launch the application...
 pause >nul
 
-python aoe4strat.py
+python Assistant_lite.py
 
 endlocal
