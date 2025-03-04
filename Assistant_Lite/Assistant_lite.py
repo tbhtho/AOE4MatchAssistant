@@ -12,6 +12,7 @@ import keyboard
 profile_id = None
 your_player_name = None 
 current_window = None
+last_game_id = None  
 
 def debug():
     print('this script runs off of AOE4WORLDs Api')
@@ -51,11 +52,18 @@ def get_player_id(player_name):
 
 def recent_match():
     global profile_id
+    if not profile_id:
+        return None
     url = f"https://aoe4world.com/api/v0/players/{profile_id}/games/last"
-    response = requests.get(url)
-    if response.status_code == 200:
-        return response.json()
-    else:
+    try:
+        response = requests.get(url, timeout=5)  # Add timeout to prevent hanging
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"API Error: Status code {response.status_code}")
+            return None
+    except requests.RequestException as e:
+        print(f"Network error fetching recent match: {e}")
         return None
 
 def parse_time_ago(time_str):
@@ -95,12 +103,19 @@ def determine_team_size(match_data):
     return "Custom or Unknown"
 
 def load_strategies():
-    with open('matchup_strategies.csv', 'r') as c:
-        read = csv.DictReader(c)
-        strategies = {}
-        for row in read:
-            strategies[row['Matchup']] = row
-        return strategies
+    try:
+        with open('matchup_strategies.csv', 'r') as c:
+            read = csv.DictReader(c)
+            strategies = {}
+            for row in read:
+                strategies[row['Matchup']] = row
+            return strategies
+    except FileNotFoundError:
+        messagebox.showerror("Error", "matchup_strategies.csv not found. Please ensure it’s in the same directory.")
+        return {}
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to load strategies: {e}")
+        return {}
 
 def create_player_frame(parent, player, team_number, player_number):
     frame = Frame(parent, bg='#3c5f7a', relief='raised', borderwidth=2, padx=8, pady=4)
@@ -137,8 +152,8 @@ def toggle_window_visibility():
         else:
             current_window.deiconify()
 
-def show_match_info(match_data, window=None, last_game_id=None):
-    global current_window
+def show_match_info(match_data, window=None):
+    global current_window, last_game_id
     if window and window.winfo_exists():
         window.destroy()
     
@@ -170,26 +185,50 @@ def show_match_info(match_data, window=None, last_game_id=None):
             if matchup in strategies:
                 strategy_method = f'Best Strategy for {my_civ}'
                 strategy = strategies[matchup][strategy_method]
-                Label(frame, text=strategy, fg='#f2f2f2', bg='#1f261f', font=('Arial', 10), wraplength=450, justify='center').pack(pady=10)
+                Label(frame, text=f"{matchup} : {strategy}", fg='#f2f2f2', bg='#1f261f', font=('Arial', 10), wraplength=450, justify='center').pack(pady=10)
+                print(f"Debug: {matchup}: {strategy}") 
             else:
                 Label(frame, text=f"No strategy found for matchup: {matchup.replace('_', ' ').title()}", 
                       fg='#e74c3c', bg='#1f261f', font=('Arial', 10)).pack(pady=10)
+                print(f"Debug: {matchup}: No strategy found") 
         else:
             Label(frame, text="Could not determine opponent information.", 
                   fg='#e74c3c', bg='#1f261f', font=('Arial', 10)).pack(pady=10)
+            print("Debug: Could not determine opponent information") 
     else:
         Label(frame, text=f"Could not find your player (profile ID: {profile_id}) in the match.", 
               fg='#e74c3c', bg='#1f261f', font=('Arial', 10)).pack(pady=10)
+        print(f"Debug: Could not find your player (profile ID: {profile_id})")
 
     current_window = root
-    root.after(5000, lambda: check_for_new_game(root, match_data.get('game_id')))
+    last_game_id = match_data.get('game_id')
+    root.after(10000, check_for_new_game) 
 
-def check_for_new_game(window, last_game_id):
+def check_for_new_game(window=None):
+    global last_game_id, current_window
     match_data = recent_match()
-    if match_data and match_data.get('game_id') != last_game_id:
-        show_match_info(match_data, window, last_game_id)
-    elif window.winfo_exists():
-        window.after(5000, lambda: check_for_new_game(window, last_game_id))
+    if match_data:
+        current_game_id = match_data.get('game_id')
+        your_player, your_team_idx, _ = find_your_player(match_data['teams'])
+        if your_player:
+            my_civ = your_player['civilization']
+            opponent = find_opponent(match_data['teams'], your_team_idx)
+            enemy_civ = opponent['civilization'] if opponent else 'Unknown'
+            strategies = load_strategies()
+            matchup = f'{my_civ} vs {enemy_civ}'
+            if matchup in strategies and enemy_civ != 'Unknown':
+                strategy_method = f'Best Strategy for {my_civ}'
+                strategy = strategies[matchup][strategy_method]
+                print(f"Debug: {matchup}: {strategy}")  
+            else:
+                print(f"Debug: {matchup}: No strategy found or opponent unknown")  
+        else:
+            print("Debug: Could not find your player in the match") 
+        
+        if current_game_id and current_game_id != last_game_id:
+            show_match_info(match_data, current_window)
+    if current_window and current_window.winfo_exists():
+        current_window.after(10000, check_for_new_game)
 
 def grabbing_match_info():
     global profile_id
