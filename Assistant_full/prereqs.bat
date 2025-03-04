@@ -68,11 +68,11 @@ if %errorlevel% neq 0 (
 echo.
 echo Setup complete! You can now run the Age of Empires IV Strategy Helper.
 echo.
-echo To run the application, use: python aoe4strat.py
+echo To run the application, use: python Assistant_full.py
 echo.
 echo Press any key to run the application...
 pause > nul
 
-python aoe4strat.py
+python Assistant_full.py
 
 endlocal
