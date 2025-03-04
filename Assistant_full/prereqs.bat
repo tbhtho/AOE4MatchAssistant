@@ -6,16 +6,16 @@ echo Age of Empires IV Strategy Helper Setup
 echo ===================================
 echo.
 
-REM Check if Python is installed
+
 python --version > nul 2>&1
 if %errorlevel% neq 0 (
     echo Python is not installed. Installing Python...
     
-    REM Create temporary directory for downloads
+
     mkdir temp_downloads 2> nul
     cd temp_downloads
     
-    REM Download Python installer
+
     echo Downloading Python installer...
     curl -L -o python_installer.exe https://www.python.org/ftp/python/3.10.11/python-3.10.11-amd64.exe
     
@@ -25,16 +25,16 @@ if %errorlevel% neq 0 (
     )
     
     echo Installing Python...
-    REM Install Python with pip and add Python to PATH
+
     python_installer.exe /quiet InstallAllUsers=1 PrependPath=1 Include_test=0 Include_pip=1
     
-    REM Wait for installation to complete
+
     timeout /t 10 /nobreak > nul
     
     cd ..
     rmdir /s /q temp_downloads
     
-    REM Verify Python installation
+
     python --version > nul 2>&1
     if %errorlevel% neq 0 (
         echo Python installation failed. Please install Python manually from https://www.python.org/downloads/
@@ -49,7 +49,7 @@ if %errorlevel% neq 0 (
 echo.
 echo Installing required libraries...
 
-REM Check if pip is installed
+
 python -m pip --version > nul 2>&1
 if %errorlevel% neq 0 (
     echo Installing pip...
@@ -58,7 +58,7 @@ if %errorlevel% neq 0 (
     del get-pip.py
 )
 
-REM Install required libraries
+
 python -m pip install requests
 if %errorlevel% neq 0 (
     echo Failed to install the requests library.
